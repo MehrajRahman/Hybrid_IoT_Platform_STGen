@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""
+Distributed STGen Core Runner
+Usage: python core_node.py --bind-ip 0.0.0.0 --protocol mqtt
+"""
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+def main():
+    parser = argparse.ArgumentParser(description="Run STGen Core node")
+    parser.add_argument("--bind-ip", default="0.0.0.0", help="IP to bind to")
+    parser.add_argument("--sensor-port", default=5000, type=int)
+    parser.add_argument("--client-port", default=5001, type=int)
+    parser.add_argument("--protocol", default="mqtt", help="Protocol to use")
+    parser.add_argument("--duration", default=300, type=int)
+    parser.add_argument("--enable-elk", action="store_true", help="Enable ELK monitoring")
+    
+    args = parser.parse_args()
+    
+    config = {
+        "protocol": args.protocol,
+        "mode": "active",
+        "server_ip": args.bind_ip,
+        "server_port": args.sensor_port,
+        "client_port": args.client_port,
+        "duration": args.duration,
+        "role": "core",  # Indicates this is the core node
+        "enable_elk": args.enable_elk
+    }
+    
+    config_file = Path("core_node_config.json")
+    config_file.write_text(json.dumps(config, indent=2))
+    
+    print(f"🎯 Starting STGen Core")
+    print(f"   Bind IP: {args.bind_ip}")
+    print(f"   Sensor Port: {args.sensor_port}")
+    print(f"   Protocol: {args.protocol}")
+    
+    subprocess.run([sys.executable, "-m", "stgen.main", str(config_file)])
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,9 @@
+{
+  "name": "4G/LTE Mobile",
+  "description": "Mobile network with variable latency",
+  "latency_ms": 100,
+  "jitter_ms": 20,
+  "loss_percent": 1.5,
+  "corruption_percent": 0.05,
+  "bandwidth_kbps": 10000
+}
