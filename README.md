@@ -82,10 +82,34 @@ python -m stgen.main configs/my_protocol.json
 
 See [protocols/template/README.md](protocols/template/README.md) for details.
 
-##  Architecture
-
-
+##  Distributed simulation
+### Core Node
 ```
-python3 distributed/core_node.py   --bind-ip 0.0.0.0   --sensor-port 5000   --client-port 5001   --protocol mqtt   --num-clients 4   --duration 10
+python3 distributed/core_node.py \
+  --bind-ip 0.0.0.0 \
+  --sensor-port 5000 \
+  --protocol mqtt \
+  --duration 300
+```
+### Sensor Node
+```
+python3 distributed/sensor_node.py \
+  --core-ip 192.168.1.108 \
+  --core-port 5000 \
+  --node-id W1 \
+  --sensors 4 \
+  --sensor-types "temp,humidity,motion,light" \
+  --protocol mqtt \
+  --duration 300
+```
 
-python3 distributed/sensor_node.py   --core-ip 192.168.1.108   --core-port 5000   --node-id W1   --sensors 4   --protocol mqtt   --duration 20   
+### Client Node
+```
+python3 distributed/query_client.py \
+  --server-ip 192.168.1.108 \
+  --server-port 5000 \
+  --protocol mqtt \
+  --query-filter '{}' \
+  --query-interval 5 \
+  --duration 60
+```
