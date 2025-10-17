@@ -113,3 +113,12 @@ python3 distributed/query_client.py \
   --query-interval 5 \
   --duration 60
 ```
+
+┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+│  Sensor Nodes   │         │   MQTT Broker   │         │  Query Client   │
+│  (Publishers)   │ ──pub──>│   (Core Node)   │<──sub───│  (Consumer)     │
+│                 │         │                 │         │                 │
+│ • temp sensors  │         │ • Receives all  │         │ • Filters data  │
+│ • humidity      │         │ • Broadcasts    │         │ • Displays      │
+│ • motion        │         │                 │         │ • Saves to file │
+└─────────────────┘         └─────────────────┘         └─────────────────┘
