@@ -4,13 +4,13 @@
   "server_ip": "192.168.1.108",
   "server_port": 5000,
   "num_clients": 4,
-  "duration": 30,
-  "node_id": "W1",
+  "duration": 300,
+  "node_id": "W2",
   "role": "sensor",
   "sensors": [
-    "temp",
-    "humidity",
-    "motion",
-    "light"
+    "temp:40",
+    "humidity:30",
+    "gps:20",
+    "camera:10"
   ]
 }

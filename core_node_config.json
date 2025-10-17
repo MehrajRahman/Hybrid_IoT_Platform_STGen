@@ -3,14 +3,8 @@
   "mode": "active",
   "server_ip": "0.0.0.0",
   "server_port": 5000,
-  "client_port": 5001,
-  "num_clients": 4,
-  "duration": 10,
-  "sensors": [
-    "temp",
-    "humidity",
-    "motion"
-  ],
+  "num_clients": 0,
+  "duration": 30,
   "role": "core",
   "enable_elk": false
 }
