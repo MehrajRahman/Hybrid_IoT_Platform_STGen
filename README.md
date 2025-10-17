@@ -83,3 +83,16 @@ python -m stgen.main configs/my_protocol.json
 See [protocols/template/README.md](protocols/template/README.md) for details.
 
 ##  Architecture
+
+
+```
+python3 distributed/core_node.py \ --bind-ip 0.0.0.0 \ --sensor-port 5000 \ --client-port 5001 \ --protocol coap \ --num-clients 4 \ --duration 10
+
+
+python3 distributed/client_node.py \
+  --server-ip 192.168.1.108 \
+  --server-port 5000 \
+  --protocol coap \
+  --num-clients 4 \
+  --duration 10
+```
