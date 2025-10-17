@@ -5,7 +5,6 @@ Usage: python sensor_node.py --core-ip 192.168.1.100 --node-id A --sensors 1000
 """
 
 import argparse
-from html import parser
 import json
 import subprocess
 import sys
@@ -40,6 +39,7 @@ def main():
         "num_clients": args.sensors,
         "duration": args.duration,
         "node_id": args.node_id,  # Tag for identification
+        "role": "sensor",  # CRITICAL: Indicates this is a sensor node (client-only)
         "sensors": parse_sensor_types(args.sensor_types)
     }
     
@@ -51,6 +51,7 @@ def main():
     print(f"   Core: {args.core_ip}:{args.core_port}")
     print(f"   Protocol: {args.protocol}")
     print(f"   Duration: {args.duration}s")
+    print(f"   Mode: CLIENT-ONLY (connecting to remote broker)")
     
     # Run STGen
     subprocess.run([sys.executable, "-m", "stgen.main", str(config_file)])
@@ -63,19 +64,16 @@ def parse_sensor_types(spec):
         sensors.append(f"{sensor_type}:{percentage}")
     return sensors
 
-# Add this to sensor_node.py
-
 def apply_network_profile(profile_path: str, interface: str = "eth0"):
     """Apply network profile to this sensor node."""
-    from stgen.network_emulator import NetworkEmulator
-    
-    emulator = NetworkEmulator.from_profile(profile_path, interface)
-    print(f"   Network Profile: {emulator.profile_name}")
-    return emulator
-
-# In main():
-
-# After parsing args:
+    try:
+        from stgen.network_emulator import NetworkEmulator
+        emulator = NetworkEmulator.from_profile(profile_path, interface)
+        print(f"   Network Profile: {emulator.profile_name}")
+        return emulator
+    except ImportError:
+        print(f"   Warning: NetworkEmulator not available")
+        return None
 
 if __name__ == "__main__":
     main()

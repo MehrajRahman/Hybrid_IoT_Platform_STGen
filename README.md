@@ -86,13 +86,6 @@ See [protocols/template/README.md](protocols/template/README.md) for details.
 
 
 ```
-python3 distributed/core_node.py \ --bind-ip 0.0.0.0 \ --sensor-port 5000 \ --client-port 5001 \ --protocol coap \ --num-clients 4 \ --duration 10
+python3 distributed/core_node.py   --bind-ip 0.0.0.0   --sensor-port 5000   --client-port 5001   --protocol mqtt   --num-clients 4   --duration 10
 
-
-python3 distributed/client_node.py \
-  --server-ip 192.168.1.108 \
-  --server-port 5000 \
-  --protocol coap \
-  --num-clients 4 \
-  --duration 10
-```
+python3 distributed/sensor_node.py   --core-ip 192.168.1.108   --core-port 5000   --node-id W1   --sensors 4   --protocol mqtt   --duration 20   
