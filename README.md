@@ -27,7 +27,7 @@ STGen bridges the gap between network simulators (NS-3, OMNeT++) and physical Io
 
 ### 1. Installation
 ```bash
-git clone https://github.com/yourname/STGen.git
+git clone https://github.com/MehrajRahman/Hybrid_IoT_Platform_STGen.git
 cd STGen
 pip install -r requirements.txt
 ```
@@ -35,7 +35,7 @@ pip install -r requirements.txt
 ### 2. Build C Protocols (Optional)
 ```bash
 chmod +x tools/build_all.sh
-./tools/build_all.sh
+./tools/run_all_scenarios.sh
 ```
 
 ### 3. Run Your First Test
