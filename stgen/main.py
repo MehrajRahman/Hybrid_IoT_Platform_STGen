@@ -1,6 +1,14 @@
-
 """
-STGen CLI Entry Point - Enhanced Version
+@file main.py
+@brief STGen CLI Entry Point - Enhanced Version
+@details This is the main entry point for the STGen IoT Protocol Testing Framework. 
+         It handles command-line argument parsing, configuration loading, network emulation 
+         setup, and orchestrates either single protocol tests or multi-protocol comparisons.
+
+@author Mahdin Islam Ohi
+@date 2026-01-08
+@version 2.0
+
 Usage: 
   python -m stgen.main <config.json>
   python -m stgen.main --scenario smart_home --protocol YOUR_PROTOCOL
@@ -21,18 +29,27 @@ from .failure_injector import FailureInjector
 from .validator import validate_protocol_results
 from .network_emulator import NetworkEmulator
 
-# Configure logging
+## @brief Configure global logging settings
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     datefmt="%H:%M:%S"
 )
 
+## @brief Logger instance for the main module
 _LOG = logging.getLogger("stgen.main")
 
 
 def parse_arguments():
-    """Parse command line arguments."""
+    """
+    @brief Parse command line arguments.
+    
+    @details Configures the ArgumentParser with options for configuration files, 
+             scenarios, protocols, comparison modes, and utility flags like listing 
+             resources or enabling debug mode.
+
+    @return argparse.Namespace The parsed command line arguments.
+    """
     parser = argparse.ArgumentParser(
         description="STGen - IoT Protocol Testing Framework",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -68,7 +85,14 @@ def parse_arguments():
 
 
 def list_scenarios():
-    """Print available scenarios."""
+    """
+    @brief Print available scenarios to stdout.
+    
+    @details Scans the 'configs/scenarios/' directory via list_available_scenarios()
+             and prints the name and description of each found scenario.
+    
+    @return None
+    """
     scenarios = list_available_scenarios()
     if not scenarios:
         print("No scenarios found in configs/scenarios/")
@@ -90,7 +114,14 @@ def list_scenarios():
 
 
 def list_protocols():
-    """Print available protocols."""
+    """
+    @brief Print available protocols to stdout.
+    
+    @details Scans the 'protocols/' directory via list_available_protocols()
+             and lists them.
+    
+    @return None
+    """
     protocols = list_available_protocols()
     if not protocols:
         print("No protocols found in protocols/")
@@ -104,7 +135,24 @@ def list_protocols():
 
 
 def run_single_test(cfg: dict) -> bool:
-    """Run a single protocol test."""
+    """
+    @brief Run a single protocol test.
+    
+    @details Performs the following lifecycle:
+             1. Validates configuration.
+             2. Sets up Network Emulator (if profile exists).
+             3. Initializes the Orchestrator.
+             4. Generates the sensor data stream.
+             5. Runs the test.
+             6. Cleans up network emulation and protocol resources.
+             7. Saves the report if data was transmitted.
+
+    @param cfg Dictionary containing the full test configuration.
+    @return bool True if the test completed successfully and report was saved, False otherwise.
+    
+    @exception KeyboardInterrupt Handled to allow graceful cleanup during user interruption.
+    @exception Exception Catch-all for runtime errors during test execution.
+    """
     # Validate config
     from .utils import validate_config
     validate_config(cfg)
@@ -177,8 +225,19 @@ def run_single_test(cfg: dict) -> bool:
     else:
         _LOG.error("Test failed - no results saved")
         return False
+
+
 def run_comparison(protocols: list, scenario_cfg: dict):
-    """Run comparison of multiple protocols."""
+    """
+    @brief Run comparison of multiple protocols.
+    
+    @details Runs the ProtocolComparator to execute tests sequentially against 
+             a common scenario and generates a comparative report.
+
+    @param protocols List of protocol names (strings) to compare.
+    @param scenario_cfg Base configuration dictionary representing the scenario.
+    @return None
+    """
     from .comparator import ProtocolComparator
     
     _LOG.info(f"Comparing protocols: {', '.join(protocols)}")
@@ -203,7 +262,16 @@ def run_comparison(protocols: list, scenario_cfg: dict):
 
 
 def main():
-    """Main entry point."""
+    """
+    @brief Main entry point.
+    
+    @details Routes execution based on arguments:
+             - List operations (scenarios/protocols)
+             - Config loading (File vs Scenario)
+             - Execution mode (Single Test vs Comparison)
+    
+    @return None
+    """
     args = parse_arguments()
     
     # Set debug logging if requested
