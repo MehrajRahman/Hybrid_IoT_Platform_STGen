@@ -1,7 +1,9 @@
 # stgen/metrics_collector.py
 """
-Advanced Metrics Collection and Statistical Analysis
-Handles efficient collection and calculation of performance metrics with minimal overhead.
+@file metrics_collector.py
+@brief Advanced Metrics Collection and Statistical Analysis
+@details Handles efficient collection and calculation of performance metrics with minimal overhead.
+         Includes classes for Histogram buckets, Streaming percentiles, and a central MetricsCollector.
 """
 
 import logging
@@ -11,12 +13,16 @@ from collections import deque
 from dataclasses import dataclass, asdict
 import json
 
+## @brief Logger for the metrics collector module
 _LOG = logging.getLogger("metrics_collector")
 
 
 @dataclass
 class Percentile:
-    """Container for percentile value."""
+    """
+    @brief Container for percentile value.
+    @details Holds standard percentile points (p50, p75, p90, p95, p99).
+    """
     p50: float
     p75: float
     p90: float
@@ -24,20 +30,27 @@ class Percentile:
     p99: float
     
     def to_dict(self) -> Dict[str, float]:
+        """
+        @brief Convert percentile data to a dictionary.
+        @return Dict[str, float] Dictionary representation of the percentile values.
+        """
         return asdict(self)
 
 
 class HistogramBucket:
-    """Efficient histogram with configurable buckets."""
+    """
+    @brief Efficient histogram with configurable buckets.
+    @details Manages data distribution into fixed-width buckets to calculate statistics
+             without storing every individual data point.
+    """
     
     def __init__(self, min_val: float = 0, max_val: float = 1000, num_buckets: int = 100):
         """
-        Initialize histogram.
+        @brief Initialize histogram.
         
-        Args:
-            min_val: Minimum value
-            max_val: Maximum value
-            num_buckets: Number of buckets
+        @param min_val Minimum value for the histogram range.
+        @param max_val Maximum value for the histogram range.
+        @param num_buckets Number of buckets to divide the range into.
         """
         self.min_val = min_val
         self.max_val = max_val
@@ -51,7 +64,15 @@ class HistogramBucket:
         self.bucket_width = (max_val - min_val) / num_buckets
     
     def add(self, value: float) -> None:
-        """Add value to histogram."""
+        """
+        @brief Add value to histogram.
+        
+        @details Increments the count for the specific bucket corresponding to the value.
+                 Handles underflow and overflow if value is outside range.
+        
+        @param value The numerical value to add.
+        @return None
+        """
         self.total_count += 1
         self.total_sum += value
         
@@ -69,13 +90,13 @@ class HistogramBucket:
     
     def percentile(self, p: float) -> float:
         """
-        Calculate percentile (0-100).
+        @brief Calculate percentile (0-100).
         
-        Args:
-            p: Percentile (0-100)
+        @details Uses linear interpolation within buckets to estimate the percentile value.
+        
+        @param p Percentile to calculate (0-100).
             
-        Returns:
-            Value at percentile
+        @return float Value at the specified percentile.
         """
         if self.total_count == 0:
             return 0.0
@@ -99,13 +120,19 @@ class HistogramBucket:
         return self.max_val
     
     def mean(self) -> float:
-        """Calculate mean."""
+        """
+        @brief Calculate the arithmetic mean of added values.
+        @return float The mean value, or 0.0 if count is 0.
+        """
         if self.total_count == 0:
             return 0.0
         return self.total_sum / self.total_count
     
     def stats(self) -> Dict[str, Any]:
-        """Get histogram statistics."""
+        """
+        @brief Get histogram statistics.
+        @return Dict[str, Any] Dictionary containing count, sum, mean, min, max, underflow, and overflow.
+        """
         return {
             "count": self.total_count,
             "sum": self.total_sum,
@@ -118,39 +145,49 @@ class HistogramBucket:
 
 
 class StreamingPercentile:
-    """Calculate percentiles on-the-fly with bounded memory (t-digest style)."""
+    """
+    @brief Calculate percentiles on-the-fly with bounded memory (t-digest style).
+    @details Maintains a fixed-size buffer of recent samples to calculate exact percentiles
+             over a sliding window or limited dataset.
+    """
     
     def __init__(self, buffer_size: int = 10000):
         """
-        Initialize streaming percentile calculator.
+        @brief Initialize streaming percentile calculator.
         
-        Args:
-            buffer_size: Max samples to keep in memory
+        @param buffer_size Max samples to keep in memory (deque size).
         """
         self.buffer = deque(maxlen=buffer_size)
         self.sorted_cache = None
         self.cache_valid = False
     
     def add(self, value: float) -> None:
-        """Add sample."""
+        """
+        @brief Add sample to the buffer.
+        @details Invalidates the sorted cache.
+        @param value The value to add.
+        @return None
+        """
         self.buffer.append(value)
         self.cache_valid = False
     
     def _ensure_sorted(self) -> None:
-        """Ensure sorted cache is valid."""
+        """
+        @brief Ensure sorted cache is valid.
+        @details Sorts the buffer if the cache is currently invalid.
+        @return None
+        """
         if not self.cache_valid:
             self.sorted_cache = sorted(self.buffer)
             self.cache_valid = True
     
     def percentile(self, p: float) -> float:
         """
-        Calculate percentile.
+        @brief Calculate a single percentile.
         
-        Args:
-            p: Percentile (0-100)
+        @param p Percentile to calculate (0-100).
             
-        Returns:
-            Percentile value
+        @return float The percentile value.
         """
         if len(self.buffer) == 0:
             return 0.0
@@ -161,7 +198,12 @@ class StreamingPercentile:
         return self.sorted_cache[idx]
     
     def percentiles(self, ps: List[float]) -> Dict[str, float]:
-        """Calculate multiple percentiles efficiently."""
+        """
+        @brief Calculate multiple percentiles efficiently.
+        
+        @param ps List of percentiles to calculate (e.g., [50, 90, 99]).
+        @return Dict[str, float] Dictionary mapping percentile keys (e.g., 'p90') to values.
+        """
         result = {}
         for p in ps:
             result[f"p{int(p)}"] = self.percentile(p)
@@ -169,14 +211,17 @@ class StreamingPercentile:
 
 
 class MetricsCollector:
-    """Efficient metrics collection for protocol testing."""
+    """
+    @brief Efficient metrics collection for protocol testing.
+    @details Aggregates latency, throughput, loss, and error metrics. 
+             Supports per-client tracking and export functionality.
+    """
     
     def __init__(self, max_samples: int = 100000):
         """
-        Initialize metrics collector.
+        @brief Initialize metrics collector.
         
-        Args:
-            max_samples: Maximum samples to keep in memory
+        @param max_samples Maximum samples to keep in memory for streaming percentiles.
         """
         self.max_samples = max_samples
         
@@ -204,11 +249,13 @@ class MetricsCollector:
     
     def record_latency(self, latency_ms: float, client_id: str = None) -> None:
         """
-        Record a latency sample.
+        @brief Record a latency sample.
         
-        Args:
-            latency_ms: Latency in milliseconds
-            client_id: Optional client identifier
+        @details Updates both global statistics and per-client statistics if a client_id is provided.
+        
+        @param latency_ms Latency in milliseconds.
+        @param client_id Optional client identifier string.
+        @return None
         """
         # Global tracking
         self.latencies.add(latency_ms)
@@ -226,34 +273,51 @@ class MetricsCollector:
             self.client_stats[client_id]["count"] += 1
     
     def record_send(self) -> None:
-        """Record packet sent."""
+        """
+        @brief Record packet sent.
+        @return None
+        """
         self.packets_sent += 1
     
     def record_recv(self) -> None:
-        """Record packet received."""
+        """
+        @brief Record packet received.
+        @return None
+        """
         self.packets_recv += 1
     
     def record_loss(self, count: int = 1) -> None:
-        """Record packet loss."""
+        """
+        @brief Record packet loss.
+        @param count Number of packets lost (default 1).
+        @return None
+        """
         self.packets_lost += count
     
     def record_error(self, error_type: str, message: str = "") -> None:
         """
-        Record an error.
+        @brief Record an error.
         
-        Args:
-            error_type: Type of error
-            message: Error message
+        @param error_type Category/Type of the error.
+        @param message Detailed error message.
+        @return None
         """
         self.errors.append(f"{error_type}: {message}")
         self.error_types[error_type] = self.error_types.get(error_type, 0) + 1
     
     def finalize(self) -> None:
-        """Finalize collection (call after test completes)."""
+        """
+        @brief Finalize collection (call after test completes).
+        @details Sets the end time for duration calculations.
+        @return None
+        """
         self.end_time = time.time()
     
     def get_latency_percentiles(self) -> Dict[str, float]:
-        """Get latency percentiles."""
+        """
+        @brief Get latency percentiles.
+        @return Dict[str, float] Dictionary containing p50, p75, p90, p95, and p99 latency in ms.
+        """
         return {
             "p50_ms": self.latencies.percentile(50),
             "p75_ms": self.latencies.percentile(75),
@@ -263,7 +327,11 @@ class MetricsCollector:
         }
     
     def get_summary(self) -> Dict[str, Any]:
-        """Get complete metrics summary."""
+        """
+        @brief Get complete metrics summary.
+        @details Calculates duration, loss rate, throughput, and aggregates all stats.
+        @return Dict[str, Any] Comprehensive dictionary of all collected metrics.
+        """
         duration = (self.end_time or time.time()) - self.start_time
         loss_rate = 1.0 - (self.packets_recv / max(self.packets_sent, 1))
         
@@ -287,7 +355,12 @@ class MetricsCollector:
         return summary
     
     def get_client_summary(self, client_id: str) -> Dict[str, Any]:
-        """Get per-client metrics."""
+        """
+        @brief Get per-client metrics.
+        
+        @param client_id The ID of the client to retrieve stats for.
+        @return Dict[str, Any] Dictionary containing packet counts, error counts, and latency stats for the client.
+        """
         if client_id not in self.client_stats:
             return {}
         
@@ -313,10 +386,12 @@ class MetricsCollector:
     
     def export_results(self, filepath: str) -> None:
         """
-        Export metrics to JSON.
+        @brief Export metrics to JSON.
         
-        Args:
-            filepath: Output file path
+        @details Serializes the summary and per-client summaries to a JSON file.
+        
+        @param filepath Output file path.
+        @return None
         """
         summary = self.get_summary()
         
@@ -332,7 +407,11 @@ class MetricsCollector:
         _LOG.info("Metrics exported to %s", filepath)
     
     def print_summary(self) -> None:
-        """Print metrics summary to console."""
+        """
+        @brief Print metrics summary to console.
+        @details Formats key metrics (duration, throughput, latency, errors) for human readability.
+        @return None
+        """
         summary = self.get_summary()
         
         print("\n" + "=" * 70)

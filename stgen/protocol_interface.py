@@ -1,6 +1,11 @@
+# stgen/protocol_interface.py
 """
-Protocol Interface Contract for STGen
-All protocol implementations must inherit from this base class.
+@file protocol_interface.py
+@brief Protocol Interface Contract for STGen
+@details Defines the abstract base class that all protocol implementations must inherit from.
+         This interface enforces consistency across different IoT protocols (e.g., CoAP, MQTT),
+         allowing the orchestrator to manage them uniformly regardless of their underlying 
+         transport mechanisms.
 """
 
 from abc import ABC, abstractmethod
@@ -9,25 +14,25 @@ from typing import Tuple, Dict, Any
 
 class ProtocolInterface(ABC):
     """
-    Base class for all protocol implementations in STGen.
+    @brief Base class for all protocol implementations in STGen.
     
-    Protocols can operate in two modes:
-    - 'active': STGen orchestrator drives send_data() for each packet
-    - 'passive': Protocol binaries run autonomously, STGen monitors
+    @details Protocols can operate in two modes:
+             - 'active': STGen orchestrator explicitly calls send_data() for each packet.
+             - 'passive': Protocol binaries/scripts run autonomously (e.g., shell scripts), 
+                          while STGen monitors their process state and logs.
     """
     
     def __init__(self, cfg: Dict[str, Any]):
         """
-        Initialize protocol with configuration.
+        @brief Initialize protocol with configuration.
         
-        Args:
-            cfg: Configuration dict containing:
-                - mode: 'active' or 'passive'
-                - server_ip: Server address
-                - server_port: Server port
-                - num_clients: Number of client instances
-                - duration: Test duration in seconds
-                - protocol-specific params
+        @param cfg Configuration dictionary containing standard keys:
+                   - mode: 'active' or 'passive'
+                   - server_ip: Server address
+                   - server_port: Server port
+                   - num_clients: Number of client instances
+                   - duration: Test duration in seconds
+                   - [protocol-specific params]
         """
         self.cfg = cfg
         self.mode = cfg.get("mode", "active")
@@ -36,67 +41,78 @@ class ProtocolInterface(ABC):
     @abstractmethod
     def start_server(self) -> None:
         """
-        Start the server process/thread.
-        Should bind to cfg['server_ip:port'] and run in background.
-        Must return immediately (non-blocking).
+        @brief Start the server process/thread.
+        
+        @details Should bind to cfg['server_ip:port'] and run in the background.
+                 This method must return immediately (non-blocking) to allow the 
+                 orchestrator to proceed.
+        
+        @return None
         """
         pass
     
     @abstractmethod
     def start_clients(self, num: int) -> None:
         """
-        Launch N client processes/threads.
-        Clients should connect to server but not send data yet.
+        @brief Launch N client processes/threads.
         
-        Args:
-            num: Number of client instances to start
+        @details Clients should establish connections to the server but typically 
+                 should not start streaming data until commanded (in Active mode).
+        
+        @param num Number of client instances to start.
+        @return None
         """
         pass
     
     def send_data(self, client_id: str, data: Dict) -> Tuple[bool, float]:
         """
-        Send sensor data from a specific client (ACTIVE MODE ONLY).
+        @brief Send sensor data from a specific client (ACTIVE MODE ONLY).
         
-        Args:
-            client_id: Identifier for the client
-            data: Sensor data dict with keys:
-                - dev_id: Device identifier
-                - ts: Timestamp
-                - seq_no: Sequence number
-                - sensor_data: Actual sensor reading
+        @param client_id Identifier for the client instance sending the data.
+        @param data Sensor data dictionary with standard keys:
+                    - dev_id: Device identifier
+                    - ts: Timestamp
+                    - seq_no: Sequence number
+                    - sensor_data: Actual sensor reading payload
         
-        Returns:
-            Tuple of (success: bool, timestamp: float)
-            timestamp is server receipt time for latency calculation
+        @return Tuple[bool, float] A tuple containing:
+                - success (bool): True if the transmission was successful.
+                - timestamp (float): The timestamp of receipt at the server (for latency calculation).
         
-        Note:
-            For passive protocols, this can raise NotImplementedError
-            or return (True, 0.0) placeholder values.
+        @note For passive protocols, this can raise NotImplementedError or return 
+              (True, 0.0) as placeholder values since STGen doesn't drive the traffic.
+        
+        @exception NotImplementedError If not implemented by the specific protocol subclass.
         """
         raise NotImplementedError("Use passive mode or override send_data")
     
     @abstractmethod
     def stop(self) -> None:
         """
-        Gracefully shutdown all clients and server.
-        Must kill/terminate all spawned processes.
+        @brief Gracefully shutdown all clients and server.
+        
+        @details Must ensure all spawned processes, threads, or sockets are 
+                 terminated/closed to prevent resource leaks.
+        
+        @return None
         """
         pass
     
     def is_alive(self) -> bool:
         """
-        Check if protocol processes are still running.
+        @brief Check if protocol processes are still running.
         
-        Returns:
-            bool: True if protocol is operational
+        @return bool True if protocol is operational, False otherwise.
         """
         return self._alive
     
     def get_metrics(self) -> Dict[str, Any]:
         """
-        Optional: Return protocol-specific metrics.
+        @brief Optional: Return protocol-specific metrics.
         
-        Returns:
-            Dict with protocol-specific performance data
+        @details Subclasses can override this to provide metrics unique to their 
+                 transport layer (e.g., retransmission counts for TCP-based protocols).
+        
+        @return Dict[str, Any] Dictionary with protocol-specific performance data.
         """
         return {}
