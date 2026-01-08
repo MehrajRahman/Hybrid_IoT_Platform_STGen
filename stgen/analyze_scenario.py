@@ -1,3 +1,13 @@
+"""
+@file analyze_scenario.py
+@brief Smart Agriculture Case Study Analysis Script
+@details AUTOMATED ANALYSIS SCRIPT (Section 5.3)
+         This script executes the analytic component of the Smart Agriculture case study.
+         It aggregates results from previous STGen executions, applies the energy consumption model,
+         and generates a comparative report on battery life, latency, and reliability to
+         recommend the optimal protocol.
+"""
+
 import json
 import sys
 import logging
@@ -13,22 +23,36 @@ except ImportError:
     sys.exit(1)
 
 # --- Configuration ---
+
+## @brief Directory containing STGen test results
 RESULTS_DIR = Path("../results")
+
+## @brief Path to the specific scenario configuration file used for analysis
 SCENARIO_FILE = Path("../configs/scenarios/smart_agriculture.json")
-# Add all protocols you want to compare
+
+## @brief List of protocol names to include in the comparison
 PROTOCOLS_TO_COMPARE = ["mqtt", "coap", "my_udp"] 
+
 # ---------------------
 
+## @brief Configure basic logging to stdout
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger()
 
+
 def find_latest_result(protocol: str) -> Path | None:
     """
-    Finds the latest 'summary.json' for a given protocol.
+    @brief Finds the latest 'summary.json' for a given protocol.
     
-    Note: This assumes the latest run for a protocol corresponds
-    to the scenario being analyzed. For best results, clean the
-    'results' directory before running your case study.
+    @details Scans the `RESULTS_DIR` for folders matching the pattern `{protocol}_*`.
+             It sorts them by modification time and selects the most recent one.
+             
+    @note This assumes the latest run for a protocol corresponds to the scenario 
+          being analyzed. For best results, clean the 'results' directory before 
+          running your case study.
+    
+    @param protocol The name of the protocol to search for (e.g., 'mqtt').
+    @return Path | None Path to the 'summary.json' file if found, else None.
     """
     search_pattern = f"{protocol}_*"
     all_dirs = list(RESULTS_DIR.glob(search_pattern))
@@ -48,8 +72,21 @@ def find_latest_result(protocol: str) -> Path | None:
         log.warning(f"Found dir {latest_dir} but no summary.json inside.")
         return None
 
+
 def main():
-    """Runs the full case study analysis."""
+    """
+    @brief Runs the full case study analysis.
+    
+    @details Performs the following workflow:
+             1. Loads the Smart Agriculture scenario configuration.
+             2. Initializes the EnergyModel.
+             3. Iterates through specified protocols (MQTT, CoAP, UDP).
+             4. Retrieves the latest simulation metrics (packet loss, latency) from disk.
+             5. Calculates estimated battery life based on scenario traffic patterns.
+             6. Prints a ranked comparison (Section 5.3) and a final recommendation (Section 5.4).
+             
+    @return None
+    """
     log.info("--- Running Smart Agriculture Case Study Analysis ---")
     log.info(f"Loading scenario: {SCENARIO_FILE}")
     

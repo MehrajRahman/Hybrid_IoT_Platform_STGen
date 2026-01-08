@@ -1,8 +1,11 @@
-
 # stgen/orchestrator.py
 """
-Test Orchestration Engine (Fixed for Distributed Mode)
-Manages protocol lifecycle, data feeding, and metrics collection.
+@file orchestrator.py
+@brief Test Orchestration Engine (Fixed for Distributed Mode)
+@details Manages protocol lifecycle, data feeding, and metrics collection.
+         The Orchestrator is the central component that loads protocol modules,
+         drives the testing loop (in active mode), or monitors execution (in passive mode),
+         and aggregates results.
 """
 
 import importlib
@@ -13,21 +16,28 @@ import logging
 from pathlib import Path
 from typing import Iterable, Tuple, Dict, Any
 
+## @brief Logger for the orchestrator module
 _LOG = logging.getLogger("orchestrator")
 
 class Orchestrator:
     """
-    Main orchestration engine for STGen.
-    Handles test lifecycle: load → start → feed → measure → stop.
+    @brief Main orchestration engine for STGen.
+    @details Handles test lifecycle: load -> start -> feed -> measure -> stop.
+             It supports distributed nodes by identifying its role and node_id from the configuration.
     """
     
     def __init__(self, protocol_name: str, cfg: Dict[str, Any]):
         """
-        Initialize orchestrator with a protocol.
+        @brief Initialize orchestrator with a protocol.
         
-        Args:
-            protocol_name: Name of protocol module in protocols/
-            cfg: Configuration dictionary
+        @details Dynamically imports the specified protocol module. It attempts to load
+                 from `protocols.<name>.<name>` first (nested package style) and falls back 
+                 to `protocols.<name>` (flat style).
+        
+        @param protocol_name Name of protocol module in protocols/ directory.
+        @param cfg Configuration dictionary containing test parameters and node identity.
+        
+        @exception RuntimeError Raised if the protocol module cannot be loaded.
         """
         self.protocol_name = protocol_name
         self.cfg = cfg
@@ -58,13 +68,16 @@ class Orchestrator:
     
     def run_test(self, stream: Iterable[Tuple[str, Dict, float]]) -> bool:
         """
-        Execute the full test lifecycle.
+        @brief Execute the full test lifecycle.
         
-        Args:
-            stream: Generator yielding (client_id, data_dict, timeout)
+        @details Manages the sequence of:
+                 1. Starting the server.
+                 2. Starting clients (if num_clients > 0).
+                 3. Routing execution to either _run_active or _run_passive based on mode.
         
-        Returns:
-            bool: True if test completed successfully
+        @param stream Generator yielding tuples of (client_id, data_dict, timeout).
+        
+        @return bool True if test completed successfully, False if initialization failed.
         """
         _LOG.info(f"Starting test - protocol={self.protocol_name}, mode={self.protocol.mode}, role={self.role}")
         
@@ -93,7 +106,16 @@ class Orchestrator:
             return self._run_passive()
     
     def _run_active(self, stream: Iterable[Tuple[str, Dict, float]]) -> bool:
-        """Active mode: orchestrator drives send_data()."""
+        """
+        @brief Run test in ACTIVE mode.
+        
+        @details In active mode, the Python orchestrator iterates through the data stream 
+                 and calls `protocol.send_data()` for each packet. It measures latency 
+                 based on the timestamps returned by the protocol adapter.
+        
+        @param stream Generator yielding (client_id, payload, timeout).
+        @return bool True on completion.
+        """
         _LOG.info("Running in ACTIVE mode")
         
         # If this is a server-only node (core), just listen
@@ -133,7 +155,15 @@ class Orchestrator:
         return True
     
     def _run_passive(self) -> bool:
-        """Passive mode: binaries run autonomously."""
+        """
+        @brief Run test in PASSIVE mode.
+        
+        @details In passive mode, the orchestrator simply sleeps for the test duration
+                 while external binaries/scripts handle traffic. Afterward, it parses
+                 logs (e.g., `recv.log`) to gather metrics.
+                 
+        @return bool True on completion.
+        """
         dur = self.cfg.get("duration", 30)
         _LOG.info(f"Running in PASSIVE mode for {dur}s")
         time.sleep(dur)
@@ -143,7 +173,14 @@ class Orchestrator:
         return True
     
     def _parse_recv_log(self) -> None:
-        """Parse recv.log file written by C server."""
+        """
+        @brief Parse recv.log file written by C server.
+        
+        @details Reads `recv.log` from the current directory, expecting lines in the format `seq latency_us`.
+                 Updates the metrics dictionary with parsed values.
+        
+        @return None
+        """
         log = Path("recv.log")
         
         if not log.exists():
@@ -164,10 +201,15 @@ class Orchestrator:
     
     def save_report(self, out_dir: Path) -> None:
         """
-        Generate and save test report.
+        @brief Generate and save test report.
         
-        Args:
-            out_dir: Output directory for results
+        @details Calculates statistics (min, max, avg, p50, p95 latency) and writes:
+                 - summary.json: Overall statistics.
+                 - latencies.txt: Raw latency values.
+                 - errors.txt: List of errors encountered.
+        
+        @param out_dir Output directory path for results.
+        @return None
         """
         out_dir.mkdir(parents=True, exist_ok=True)
         
