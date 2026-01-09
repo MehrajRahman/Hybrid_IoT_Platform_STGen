@@ -1,7 +1,10 @@
 # stgen/report_generator.py
 """
-Multi-format Report Generation with Visualizations
-Generates HTML, Markdown, JSON, and CSV reports from test results.
+@file report_generator.py
+@brief Multi-format Report Generation with Visualizations
+@details Generates HTML, Markdown, JSON, and CSV reports from test results.
+         This module provides a robust way to visualize test data (using Chart.js in HTML)
+         or export it for further analysis in tools like Excel.
 """
 
 import json
@@ -11,44 +14,72 @@ from pathlib import Path
 from typing import Dict, List, Any
 from datetime import datetime
 
+# @brief Logger for the report generator module
 _LOG = logging.getLogger("report_generator")
 
 
 class ReportGenerator:
-    """Generate multi-format reports from test results."""
-    
+    """
+    @brief Generate multi-format reports from test results.
+    @details Handles the creation of:
+             - Interactive HTML dashboards.
+             - Human-readable text/markdown summaries.
+             - Machine-readable JSON/CSV exports.
+    """
+
     def __init__(self, results: Dict[str, Any], scenario_name: str = "Unnamed"):
         """
-        Initialize report generator.
-        
-        Args:
-            results: Test results dictionary
-            scenario_name: Name of scenario tested
+        @brief Initialize report generator.
+
+        @param results Dictionary containing metrics (e.g., 'sent', 'recv', 'p95_ms').
+        @param scenario_name Name of the scenario tested (used in headers/titles).
         """
         self.results = results
         self.scenario_name = scenario_name
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
+
     def generate_html_report(self, filepath: str) -> None:
-        """Generate HTML report with embedded charts."""
+        """
+        @brief Generate HTML report with embedded charts.
+
+        @details Creates a standalone HTML file including:
+                 - CSS styling for a modern dashboard look.
+                 - Metrics cards for quick summary.
+                 - Chart.js integration for latency and packet loss visualization.
+
+        @param filepath Output path for the HTML file.
+        @return None
+        """
         html_content = self._build_html()
         Path(filepath).write_text(html_content)
         _LOG.info("HTML report generated: %s", filepath)
-    
+
     def generate_text_report(self, filepath: str) -> None:
-        """Generate plain text report for console."""
+        """
+        @brief Generate plain text report for console or log viewing.
+        @param filepath Output path for the .txt file.
+        @return None
+        """
         text_content = self._build_text()
         Path(filepath).write_text(text_content)
         _LOG.info("Text report generated: %s", filepath)
-    
+
     def generate_markdown_report(self, filepath: str) -> None:
-        """Generate Markdown report."""
+        """
+        @brief Generate Markdown report suitable for Git wikis or READMEs.
+        @param filepath Output path for the .md file.
+        @return None
+        """
         md_content = self._build_markdown()
         Path(filepath).write_text(md_content)
         _LOG.info("Markdown report generated: %s", filepath)
-    
+
     def generate_json_report(self, filepath: str) -> None:
-        """Generate JSON export."""
+        """
+        @brief Generate JSON export for programmatic consumption.
+        @param filepath Output path for the .json file.
+        @return None
+        """
         json_data = {
             "metadata": {
                 "timestamp": self.timestamp,
@@ -59,31 +90,42 @@ class ReportGenerator:
         }
         Path(filepath).write_text(json.dumps(json_data, indent=2))
         _LOG.info("JSON report generated: %s", filepath)
-    
+
     def generate_csv_report(self, filepath: str) -> None:
-        """Generate CSV export for Excel."""
+        """
+        @brief Generate CSV export for Excel/Spreadsheet analysis.
+
+        @details Flattens the results dictionary. Handles nested dictionaries like 
+                 'latency_histogram' by dot-notating keys (e.g., latency_histogram.p50).
+
+        @param filepath Output path for the .csv file.
+        @return None
+        """
         with open(filepath, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(["Metric", "Value"])
-            
+
             for key, value in self.results.items():
                 if isinstance(value, (int, float, str, bool)):
                     writer.writerow([key, value])
                 elif isinstance(value, dict) and key == "latency_histogram":
                     for hkey, hval in value.items():
                         writer.writerow([f"latency_histogram.{hkey}", hval])
-        
+
         _LOG.info("CSV report generated: %s", filepath)
-    
+
     def _build_text(self) -> str:
-        """Build plain text report."""
+        """
+        @brief Build plain text report content.
+        @return str The formatted text report.
+        """
         lines = []
         lines.append("=" * 80)
         lines.append(f"STGen Test Report - {self.scenario_name}")
         lines.append(f"Generated: {self.timestamp}")
         lines.append("=" * 80)
         lines.append("")
-        
+
         # Summary metrics
         lines.append("SUMMARY")
         lines.append("-" * 80)
@@ -92,10 +134,11 @@ class ReportGenerator:
         lines.append(f"Packets Received: {self.results.get('recv', 0)}")
         lines.append(f"Packets Lost: {self.results.get('lost', 0)}")
         lines.append(f"Loss Rate: {self.results.get('loss', 0)*100:.2f}%")
-        lines.append(f"Throughput: {self.results.get('throughput_msg_sec', 0):.1f} msg/s")
+        lines.append(
+            f"Throughput: {self.results.get('throughput_msg_sec', 0):.1f} msg/s")
         lines.append(f"Errors: {self.results.get('errors', 0)}")
         lines.append("")
-        
+
         # Latency metrics
         if self.results.get("p50_ms"):
             lines.append("LATENCY (ms)")
@@ -106,7 +149,7 @@ class ReportGenerator:
             lines.append(f"P95: {self.results.get('p95_ms', 0):.2f}")
             lines.append(f"P99: {self.results.get('p99_ms', 0):.2f}")
             lines.append("")
-        
+
         # Error types
         if self.results.get("error_types"):
             lines.append("ERROR TYPES")
@@ -114,24 +157,29 @@ class ReportGenerator:
             for err_type, count in self.results["error_types"].items():
                 lines.append(f"{err_type}: {count}")
             lines.append("")
-        
+
         lines.append("=" * 80)
         return "\n".join(lines)
-    
+
     def _build_markdown(self) -> str:
-        """Build Markdown report."""
+        """
+        @brief Build Markdown report content.
+        @return str The formatted markdown report.
+        """
         md = []
         md.append(f"# STGen Test Report: {self.scenario_name}\n")
         md.append(f"**Generated:** {self.timestamp}\n")
-        
+
         md.append("## Summary\n")
-        md.append(f"- **Duration:** {self.results.get('duration_sec', 0):.2f}s")
+        md.append(
+            f"- **Duration:** {self.results.get('duration_sec', 0):.2f}s")
         md.append(f"- **Sent:** {self.results.get('sent', 0)}")
         md.append(f"- **Received:** {self.results.get('recv', 0)}")
         md.append(f"- **Lost:** {self.results.get('lost', 0)}")
         md.append(f"- **Loss Rate:** {self.results.get('loss', 0)*100:.2f}%")
-        md.append(f"- **Throughput:** {self.results.get('throughput_msg_sec', 0):.1f} msg/s\n")
-        
+        md.append(
+            f"- **Throughput:** {self.results.get('throughput_msg_sec', 0):.1f} msg/s\n")
+
         if self.results.get("p50_ms"):
             md.append("## Latency Percentiles (ms)\n")
             md.append("| Percentile | Latency |")
@@ -141,26 +189,29 @@ class ReportGenerator:
             md.append(f"| P90 | {self.results.get('p90_ms', 0):.2f} |")
             md.append(f"| P95 | {self.results.get('p95_ms', 0):.2f} |")
             md.append(f"| P99 | {self.results.get('p99_ms', 0):.2f} |\n")
-        
+
         if self.results.get("error_types"):
             md.append("## Errors\n")
             for err_type, count in self.results["error_types"].items():
                 md.append(f"- **{err_type}:** {count}")
             md.append("")
-        
+
         return "\n".join(md)
-    
+
     def _build_html(self) -> str:
-        """Build HTML report with charts."""
+        """
+        @brief Build HTML report content with embedded Chart.js scripts.
+        @return str The full HTML document string.
+        """
         sent = self.results.get("sent", 0)
         recv = self.results.get("recv", 0)
         loss_pct = self.results.get("loss", 0) * 100
         throughput = self.results.get("throughput_msg_sec", 0)
-        
+
         p50 = self.results.get("p50_ms", 0)
         p95 = self.results.get("p95_ms", 0)
         p99 = self.results.get("p99_ms", 0)
-        
+
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
