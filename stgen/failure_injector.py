@@ -1,7 +1,17 @@
-"""
-Failure Injection Framework for STGen
-Simulates realistic network failures and client crashes to test protocol robustness.
-"""
+##! @file failure_injector.py
+##! @brief Failure Injection Framework for Testing Protocol Robustness
+##! 
+##! @details
+##! Simulates realistic network failures and client crashes:
+##! - Packet loss (random or targeted)
+##! - Client crashes and recoveries
+##! - Network partitions
+##! - Data corruption
+##! - Byzantine failures
+##!
+##! @author STGen Development Team
+##! @version 2.0
+##! @date 2024
 
 import random
 import time
@@ -14,25 +24,27 @@ _LOG = logging.getLogger("failure_injector")
 
 @dataclass
 class FailureEvent:
-    """Represents a single failure event."""
-    time_sec: float
-    failure_type: str  # "packet_loss", "client_crash", "network_partition", "corruption"
-    target: Optional[str] = None  # Client ID or None for global
-    duration_sec: Optional[float] = None
-    metadata: Dict[str, Any] = None
+    ##! @struct FailureEvent
+    ##! @brief Represents a single failure event
+    time_sec: float          ##! When failure occurs (seconds into test)
+    failure_type: str        ##! Type: packet_loss, client_crash, network_partition, corruption
+    target: Optional[str] = None  ##! Target client ID or None for global
+    duration_sec: Optional[float] = None  ##! How long failure lasts
+    metadata: Dict[str, Any] = None  ##! Additional failure parameters
 
 
 class FailureInjector:
-    """
-    Injects realistic failures during protocol testing.
-    
-    Supported failure modes:
-    - Packet loss (random or targeted)
-    - Client crashes and restarts
-    - Network partitions (split-brain)
-    - Message corruption
-    - Latency spikes
-    """
+    ##! @class FailureInjector
+    ##! @brief Injects realistic failures during protocol testing
+    ##! @details
+    ##! Supported failure modes:
+    ##! - Packet loss (random or targeted)
+    ##! - Client crashes and recovery
+    ##! - Network partitions
+    ##! - Client crashes and restarts
+    ##! - Network partitions (split-brain)
+    ##! - Message corruption
+    ##! - Latency spikes
     
     def __init__(self, cfg: Dict[str, Any]):
         """
@@ -46,11 +58,17 @@ class FailureInjector:
                 - message_corruption: float (0.0-1.0)
                 - latency_spike: {probability, duration_ms}
         """
-        self.cfg = cfg.get("failure_injection", {})
-        self.packet_loss_rate = self.cfg.get("packet_loss", 0.0)
-        self.corruption_rate = self.cfg.get("message_corruption", 0.0)
+        self.cfg = cfg  # Store the whole config, or look for 'failure_injection' key
+        # Check if 'failure_injection' exists as a dict, or if we passed flat args
+        fi_cfg = cfg.get("failure_injection", {})
         
-        self.crash_times = self.cfg.get("client_crashes", [])
+        # If 'failure_rate' is at top level (e.g. from CLI overrides), use it for packet loss
+        top_loss = cfg.get("failure_rate", 0.0)
+        
+        self.packet_loss_rate = fi_cfg.get("packet_loss", top_loss)
+        self.corruption_rate = fi_cfg.get("message_corruption", 0.0)
+        
+        self.crash_times = fi_cfg.get("client_crashes", [])
         self.partition_cfg = self.cfg.get("network_partition", None)
         self.latency_spike_cfg = self.cfg.get("latency_spike", None)
         
@@ -60,9 +78,27 @@ class FailureInjector:
         
         self.start_time = time.time()
         self.events: List[FailureEvent] = []
+        self.protocol = None
         
         _LOG.info("Failure Injector initialized: loss=%.1f%%, corruption=%.1f%%",
                   self.packet_loss_rate * 100, self.corruption_rate * 100)
+
+    def attach_protocol(self, protocol_instance):
+        """
+        Attach protocol instance to control socket/client lifecycles.
+        """
+        self.protocol = protocol_instance
+    
+    def start(self):
+        """Start failure injector (no-op for now unless running a background thread)."""
+        self.start_time = time.time()
+        _LOG.info("Failure Injection started")
+    
+    def stop(self):
+        """Stop failure injector (no-op)."""
+        _LOG.info("Failure Injection stopped")
+        summary = self.get_failure_summary()
+        _LOG.info("Failure Summary: %s", summary)
     
     def should_drop_packet(self, client_id: str) -> bool:
         """

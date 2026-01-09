@@ -1,9 +1,18 @@
 
-# stgen/orchestrator.py
-"""
-Test Orchestration Engine (Fixed for Distributed Mode)
-Manages protocol lifecycle, data feeding, and metrics collection.
-"""
+##! @file orchestrator.py
+##! @brief Test Orchestration Engine for STGen
+##! 
+##! @details
+##! Core orchestration component responsible for:
+##! - Protocol lifecycle management (init, start, feed, measure, stop)
+##! - Configuration loading and validation
+##! - Real-time data feeding and metric collection
+##! - Distributed mode support
+##! - Error handling and recovery
+##!
+##! @author STGen Development Team
+##! @version 2.0
+##! @date 2024
 
 import importlib
 import json
@@ -15,20 +24,28 @@ from typing import Iterable, Tuple, Dict, Any
 
 _LOG = logging.getLogger("orchestrator")
 
+from .failure_injector import FailureInjector, wrap_send_with_failures
+
 class Orchestrator:
-    """
-    Main orchestration engine for STGen.
-    Handles test lifecycle: load → start → feed → measure → stop.
-    """
+    ##! @class Orchestrator
+    ##! @brief Main orchestration engine for STGen
+    ##! @details
+    ##! Handles complete test lifecycle:
+    ##! 1. Load protocol module
+    ##! 2. Initialize with configuration
+    ##! 3. Start protocol instance
+    ##! 4. Feed data streams
+    ##! 5. Collect metrics
+    ##! 6. Stop and cleanup
     
     def __init__(self, protocol_name: str, cfg: Dict[str, Any]):
-        """
-        Initialize orchestrator with a protocol.
-        
-        Args:
-            protocol_name: Name of protocol module in protocols/
-            cfg: Configuration dictionary
-        """
+        ##! @brief Initialize orchestrator with a protocol
+        ##! 
+        ##! @param protocol_name Name of protocol module in protocols/
+        ##! @param cfg Configuration dictionary with protocol parameters
+        ##! 
+        ##! @throws ImportError If protocol module not found
+        ##! @throws ValueError If configuration is invalid
         self.protocol_name = protocol_name
         self.cfg = cfg
         self.node_id = cfg.get("node_id", "core")
@@ -56,6 +73,15 @@ class Orchestrator:
             "err": []
         }
     
+    def apply_failure_injection(self, injector: FailureInjector):
+        """
+        Wrap the protocol's send_data method with failure injection logic.
+        """
+        _LOG.info("Applying failure injection to protocol")
+        # Monkey patch the send_data method of the protocol instance
+        original_send = self.protocol.send_data
+        self.protocol.send_data = wrap_send_with_failures(original_send, injector)
+
     def run_test(self, stream: Iterable[Tuple[str, Dict, float]]) -> bool:
         """
         Execute the full test lifecycle.
@@ -93,7 +119,7 @@ class Orchestrator:
             return self._run_passive()
     
     def _run_active(self, stream: Iterable[Tuple[str, Dict, float]]) -> bool:
-        """Active mode: orchestrator drives send_data()."""
+        """Active mode: orchestrator drives send_data() with drift compensation."""
         _LOG.info("Running in ACTIVE mode")
         
         # If this is a server-only node (core), just listen
@@ -103,6 +129,10 @@ class Orchestrator:
             _LOG.info(f"Listening for {duration} seconds...")
             time.sleep(duration)
             return True
+        
+        # Initialize drift compensation
+        # time.perf_counter() is monotonic and suitable for measuring intervals
+        next_wake_time = time.perf_counter()
         
         # Sensor nodes - send data
         for cid, payload, to in stream:
@@ -119,7 +149,7 @@ class Orchestrator:
                 ok, t_srv = self.protocol.send_data(cid, payload)
             except Exception as e:
                 self.metrics["err"].append(str(e))
-                continue
+                # Continue even if send failed, to maintain timing if possible
             
             self.metrics["sent"] += 1
             
@@ -128,7 +158,18 @@ class Orchestrator:
                 self.metrics["lat"].append((t_srv - t0) * 1000)
                 self.metrics["recv"] += 1
             
-            time.sleep(to)
+            # ACCURATE TIMING LOGIC (Drift Compensation)
+            # The 'to' value is the target interval until the NEXT message.
+            # We increment the target wake time by this interval.
+            next_wake_time += to
+            
+            now = time.perf_counter()
+            sleep_time = next_wake_time - now
+            
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            # else: We are lagging behind (processing took longer than interval).
+            # We don't sleep, immediately processing next message to catch up.
         
         return True
     
