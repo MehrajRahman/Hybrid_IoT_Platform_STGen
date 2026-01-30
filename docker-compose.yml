@@ -1,0 +1,50 @@
+services:
+  stgen-core:
+    build: .
+    network_mode: host # Required for direct access to NetEm and high-speed UDP
+    environment:
+      - STGEN_ROLE=core
+    volumes:
+      - ./configs:/app/configs
+      - ./results:/app/results
+      - ./logs:/app/logs
+    command: python3 -m stgen.main configs/mqtt.json
+
+  stgen-sensor-vehicle:
+    build: .
+    network_mode: host
+    depends_on:
+      - stgen-core
+    environment:
+      - STGEN_ROLE=sensor
+    volumes:
+      - ./configs:/app/configs
+      - ./results:/app/results
+      - ./logs:/app/logs
+    command: python3 -m stgen.main configs/scenarios/connected_vehicle.json
+
+  stgen-sensor-home:
+    build: .
+    network_mode: host
+    depends_on:
+      - stgen-core
+    environment:
+      - STGEN_ROLE=sensor
+    volumes:
+      - ./configs:/app/configs
+      - ./results:/app/results
+      - ./logs:/app/logs
+    command: python3 -m stgen.main configs/scenarios/smart_home.json
+
+  stgen-sensor-factory:
+    build: .
+    network_mode: host
+    depends_on:
+      - stgen-core
+    environment:
+      - STGEN_ROLE=sensor
+    volumes:
+      - ./configs:/app/configs
+      - ./results:/app/results
+      - ./logs:/app/logs
+    command: python3 -m stgen.main configs/scenarios/smart_factory.json

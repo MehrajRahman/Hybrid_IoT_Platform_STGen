@@ -1,0 +1,17 @@
+{
+    "name": "DCOSS Benchmark - Scalability 500",
+    "description": "High node count scalability test for DCOSS paper",
+    "protocol": "placeholder",
+    "mode": "active",
+    "server_ip": "127.0.0.1",
+    "server_port": 5000,
+    "num_clients": 500,
+    "duration": 120,
+    "packets_per_client": 50,
+    "sensors": ["temp"],
+    "traffic_pattern": {
+        "temp": {"rate_hz": 5, "burst": false}
+    },
+    "network_profile": "ideal",
+    "notes": "Scalability test with 500 nodes"
+}

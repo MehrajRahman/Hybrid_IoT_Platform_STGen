@@ -1,0 +1,24 @@
+{
+    "name": "DCOSS Benchmark - Network Impairment",
+    "description": "Lossy network scenario for protocol robustness comparison",
+    "protocol": "placeholder",
+    "mode": "active",
+    "server_ip": "127.0.0.1",
+    "server_port": 5000,
+    "num_clients": 50,
+    "duration": 60,
+    "packets_per_client": 100,
+    "sensors": ["temp", "humidity"],
+    "traffic_pattern": {
+        "temp": {"rate_hz": 10, "burst": false},
+        "humidity": {"rate_hz": 5, "burst": false}
+    },
+    "network_profile": "congested",
+    "network_conditions": {
+        "latency_ms": 50,
+        "jitter_ms": 25,
+        "bandwidth_kbps": 10000,
+        "loss_percent": 5.0
+    },
+    "notes": "Tests protocol performance under 5% packet loss and 50ms latency"
+}

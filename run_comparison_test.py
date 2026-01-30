@@ -32,7 +32,6 @@ def create_comparison_scenario(node_count=100, duration=10, rate_hz=10.0):
             "temp": {"rate_hz": rate_hz, "burst": False} 
         }
     }
-    
     filename = f"scenario_comparison_{node_count}.json"
     Path(filename).write_text(json.dumps(scenario, indent=2))
     return filename, scenario

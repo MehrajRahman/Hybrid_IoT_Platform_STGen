@@ -10,7 +10,7 @@ STGen is a comprehensive, **research-grade** framework for testing, validating, 
 
 ### Key Capabilities
 
-- **Protocol-Agnostic Architecture**: Support for MQTT, CoAP, SRTP, and custom protocols
+- **Protocol-Agnostic Architecture**: Support for MQTT, CoAP, PRTP, SRTP, and custom protocols
 - **Realistic Workloads**: 7 predefined IoT scenarios (smart home, agriculture, healthcare, etc.)
 - **Network Emulation**: Simulate latency, jitter, packet loss, and bandwidth constraints
 - **Fault Injection**: Test resilience under failures (crashes, partitions, corruption)
@@ -105,8 +105,9 @@ STGen_Future_Present/
 │   └── main.py                 # CLI interface
 │
 ├── protocols/                  # Protocol Implementations
-│   ├── mqtt/                   # MQTT (pub/sub)
-│   ├── coap/                   # CoAP (REST-like)
+│   ├── mqtt/                   # MQTT (pub/sub, TCP-based)
+│   ├── coap/                   # CoAP (REST-like, UDP-based)
+│   ├── prtp/                   # PRTP (pub/sub with Q-learning CC)
 │   ├── srtp/                   # SRTP (real-time)
 │   └── custom_udp/             # Custom UDP
 │

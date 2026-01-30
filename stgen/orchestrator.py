@@ -228,6 +228,12 @@ class Orchestrator:
             "errors": len(self.metrics["err"])
         }
         
+        # Add protocol-specific metadata (e.g., PRTP latency_mode)
+        if hasattr(self.protocol, 'latency_mode'):
+            summary["latency_mode"] = self.protocol.latency_mode
+            summary["latency_mode_description"] = getattr(self.protocol, 'latency_mode_description', 
+                                                          "RTT (2x one-way)" if self.protocol.latency_mode in ("rtt", "rtt_approx") else "one-way")
+        
         if lat:
             summary["lat_avg_ms"] = sum(lat) / len(lat)
             summary["lat_min_ms"] = lat[0]

@@ -1,0 +1,14 @@
+# PRTP Protocol Dependencies
+# PRTP is a pure Python/C implementation with minimal dependencies
+
+# No additional Python packages required beyond standard library
+# The protocol uses:
+# - socket (stdlib)
+# - struct (stdlib)  
+# - threading (stdlib)
+# - subprocess (stdlib) for C binary mode
+
+# For C binary mode, you need to build PRTP from source:
+# cd PRTP_development/PRTP
+# ./configure
+# make

@@ -1,0 +1,22 @@
+{
+    "name": "DCOSS Benchmark - Baseline",
+    "description": "Standard baseline scenario for DCOSS paper - fair protocol comparison",
+    "protocol": "placeholder",
+    "mode": "active",
+    "server_ip": "127.0.0.1",
+    "server_port": 5000,
+    "num_clients": 100,
+    "duration": 60,
+    "packets_per_client": 100,
+    "sensors": ["temp", "humidity", "motion"],
+    "traffic_pattern": {
+        "temp": {"rate_hz": 10, "burst": false},
+        "humidity": {"rate_hz": 5, "burst": false},
+        "motion": {"rate_hz": 1, "burst": true}
+    },
+    "network_profile": "ideal",
+    "weibull_k": 1.0,
+    "weibull_scale": 1.0,
+    "use_weibull_iat": false,
+    "notes": "Baseline scenario with 100 nodes sending at 10Hz for 60 seconds"
+}

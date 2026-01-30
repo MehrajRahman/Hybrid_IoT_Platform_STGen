@@ -1,0 +1,19 @@
+{
+  "protocol": "prtp",
+  "mode": "active",
+  "server_ip": "127.0.0.1",
+  "server_port": 5001,
+  "sensor_port": 5000,
+  "num_clients": 4,
+  "duration": 10,
+  "sensors": ["temp", "humidity", "motion"],
+  "reliable": false,
+  "q_learning_enabled": true,
+  "keepalive_interval": 5000,
+  "use_c_binaries": false,
+  "network_profile": "congested",
+  "weibull_k": 0.8,
+  "weibull_scale": 2.0,
+  "use_weibull_iat": true,
+  "packets_per_client": 50
+}

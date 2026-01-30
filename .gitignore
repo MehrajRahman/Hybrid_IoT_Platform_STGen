@@ -11,7 +11,8 @@ myenv/
 dist/
 build/
 *.egg
-
+results/
+prtp_logs/
 # Build artifacts
 bin/
 *.o
